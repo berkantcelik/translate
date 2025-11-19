@@ -2,9 +2,15 @@ import os
 from flask import Flask, request, jsonify, render_template
 from google import genai
 from google.genai.errors import APIError
+from flask_cors import CORS # CORS kütüphanesi
 
-# Flask uygulamasını başlat. Flask'a HTML dosyalarını 'templates' klasöründe aramasını söylüyoruz.
+# Flask uygulamasını başlat ve HTML'i 'templates' klasöründe aramasını söyle
 app = Flask(__name__, template_folder='templates') 
+
+# --- CORS'u Tüm Alan Adları İçin Etkinleştirme ---
+# Bu, tarayıcının "Failed to fetch" hatasını çözer.
+CORS(app) 
+# -----------------------------------------------
 
 # --- API Client and Model Configuration ---
 
@@ -24,25 +30,25 @@ MODEL_NAME = "gemini-2.5-flash"
 # 1. Root Path: Serves the HTML interface
 @app.route('/', methods=['GET'])
 def home():
-    """Serves the index.html file located in the 'templates' folder."""
+    """Ana URL'ye (/) gidildiğinde index.html dosyasını sunar."""
     return render_template('index.html')
 
 
 # 2. Translation API Endpoint
 @app.route('/translate', methods=['POST'])
 def translate_text():
-    """Translates Turkish text to natural and fluent English."""
+    """Türkçe metni doğal ve akıcı İngilizceye çevirir."""
     
     if not client:
-        return jsonify({"error": "Server error: Gemini API client is not ready."}), 500
+        return jsonify({"error": "Sunucu hatası: Gemini API istemcisi kullanıma hazır değil."}), 500
 
     data = request.get_json(silent=True)
     turkish_text = data.get('text') if data else None
 
     if not turkish_text:
-        return jsonify({"error": "Please provide valid JSON body with 'text' field."}), 400
+        return jsonify({"error": "Lütfen çevrilecek metni ('text' alanında) içeren geçerli bir JSON gövdesi sağlayın."}), 400
 
-    # Humanized Prompt for natural output
+    # İnsancıl Prompt
     prompt = f"""
     You are a professional translator who thinks like a human and uses fluent, natural language. 
     Translate the Turkish text below into English in a way that an English-speaking audience would perceive as completely natural and human-written. 

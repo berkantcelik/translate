@@ -83,8 +83,7 @@
     </div>
 
     <script>
-        // *** ÖNEMLİ: Bu URL'yi kendi Render API adresinizle değiştirin! ***
-        // Loglarınızdaki URL'yi kullanın: https://translate-d9il.onrender.com/translate
+        // *** KESİN URL KULLANIMI: Loglarınızdaki adrese göre ayarlandı. ***
         const API_URL = "https://translate-d9il.onrender.com/translate"; 
 
         async function translateText() {
@@ -110,8 +109,9 @@
                 });
 
                 if (!response.ok) {
-                    // 400, 500 gibi sunucu hatalarını yakalar
-                    throw new Error(`API Hatası: Sunucu kodu ${response.status}.`);
+                    // API'niz erişilebilir, ancak 404 (yol hatası) veya 500 (sunucu hatası) döndürüyor demektir.
+                    const errorDetails = await response.text();
+                    throw new Error(`API Hatası: Sunucu kodu ${response.status}. Detay: ${errorDetails.substring(0, 50)}...`);
                 }
 
                 const data = await response.json();
@@ -123,8 +123,8 @@
                 }
 
             } catch (error) {
-                // Bağlantı/ağ hatalarını yakalar
-                outputElement.innerHTML = `<span class='error'>Bağlantı Hatası: ${error.message}. API adresini kontrol edin.</span>`;
+                // Bağlantı/ağ hatalarını veya throw edilen hatayı yakalar.
+                outputElement.innerHTML = `<span class='error'>Bağlantı Hatası: ${error.message}. Sunucuya erişilemiyor.</span>`;
                 console.error('Fetch Error:', error);
             }
         }

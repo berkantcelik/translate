@@ -84,8 +84,8 @@
 
     <script>
         // *** ÖNEMLİ: Bu URL'yi kendi Render API adresinizle değiştirin! ***
-        // Sizin örneğiniz: https://translate-7uyc.onrender.com/translate
-        const API_URL = "https://translate-7uyc.onrender.com/translate";
+        // Örn: "https://translate-7uyc.onrender.com/translate"
+        const API_URL = "https://YOUR-RENDER-URL.onrender.com/translate"; 
 
         async function translateText() {
             const inputElement = document.getElementById('turkish-input');
@@ -93,7 +93,7 @@
             const turkishText = inputElement.value.trim();
 
             if (turkishText === "") {
-                outputElement.innerHTML = "<span class='error'>Lütfen çevrilecek metni giriniz.</span>";
+                outputElement.innerHTML = `<span class='error'>Lütfen çevrilecek metni giriniz.</span>`;
                 return;
             }
 
@@ -111,23 +111,19 @@
                 });
 
                 if (!response.ok) {
-                    // HTTP 400, 500 gibi hatalar yakalanır
-                    throw new Error(`API Hatası: Sunucu kodu ${response.status}. Lütfen Render loglarını kontrol edin.`);
+                    throw new Error(`API Hatası: Sunucu kodu ${response.status}.`);
                 }
 
                 const data = await response.json();
 
                 if (data.translated_text_en) {
-                    // Başarılı çeviriyi sonuç alanına yazdır
                     outputElement.innerText = data.translated_text_en;
                 } else {
-                    // API yanıtında çeviri alanı yoksa
                     outputElement.innerHTML = `<span class='error'>Hata: API'den beklenen çeviri metni alınamadı.</span>`;
                 }
 
             } catch (error) {
-                // Ağ bağlantısı veya CORS gibi hatalar yakalanır
-                outputElement.innerHTML = `<span class='error'>Bağlantı Hatası: ${error.message}. API adresi doğru mu kontrol edin?</span>`;
+                outputElement.innerHTML = `<span class='error'>Bağlantı Hatası: ${error.message}. API adresi doğru mu veya sunucu çöktü mü?</span>`;
                 console.error('Fetch Error:', error);
             }
         }

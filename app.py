@@ -1,50 +1,48 @@
 import os
-from flask import Flask, request, jsonify, render_template # render_template'i içe aktardık
+from flask import Flask, request, jsonify, render_template
 from google import genai
 from google.genai.errors import APIError
 
-# Flask uygulamasını başlat
-# templates_folder='templates' kısmı, Flask'a HTML'i nerede bulacağını söyler.
+# Flask uygulamasını başlat. Flask'a HTML dosyalarını 'templates' klasöründe aramasını söylüyoruz.
 app = Flask(__name__, template_folder='templates') 
 
-# --- API İstemcisi ve Model Konfigürasyonu ---
+# --- API Client and Model Configuration ---
 
 try:
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        raise ValueError("GEMINI_API_KEY ortam değişkeni ayarlanmadı.")
+        raise ValueError("GEMINI_API_KEY environment variable is not set.")
     client = genai.Client(api_key=api_key)
 except Exception as e:
-    app.logger.error(f"Gemini istemcisi oluşturulamadı veya API anahtarı eksik: {e}")
+    app.logger.error(f"Gemini client failed to initialize: {e}")
     client = None
 
 MODEL_NAME = "gemini-2.5-flash"
 
-# --- API Uç Noktaları (Endpoints) ---
+# --- API Endpoints ---
 
-# 1. Ana Sayfa Uç Noktası (index.html'i sunar)
+# 1. Root Path: Serves the HTML interface
 @app.route('/', methods=['GET'])
 def home():
-    """Tarayıcıya index.html dosyasını gönderir."""
-    # Flask, templates klasöründeki index.html'i arayacaktır
+    """Serves the index.html file located in the 'templates' folder."""
     return render_template('index.html')
 
 
-# 2. Çeviri Uç Noktası (API)
+# 2. Translation API Endpoint
 @app.route('/translate', methods=['POST'])
 def translate_text():
-    """Türkçe metni doğal ve akıcı İngilizceye çevirir."""
+    """Translates Turkish text to natural and fluent English."""
     
     if not client:
-        return jsonify({"error": "Sunucu hatası: Gemini API istemcisi kullanıma hazır değil."}), 500
+        return jsonify({"error": "Server error: Gemini API client is not ready."}), 500
 
     data = request.get_json(silent=True)
     turkish_text = data.get('text') if data else None
 
     if not turkish_text:
-        return jsonify({"error": "Lütfen çevrilecek metni ('text' alanında) içeren geçerli bir JSON gövdesi sağlayın."}), 400
+        return jsonify({"error": "Please provide valid JSON body with 'text' field."}), 400
 
-    # İnsancıl Prompt
+    # Humanized Prompt for natural output
     prompt = f"""
     You are a professional translator who thinks like a human and uses fluent, natural language. 
     Translate the Turkish text below into English in a way that an English-speaking audience would perceive as completely natural and human-written. 
@@ -70,11 +68,11 @@ def translate_text():
         })
 
     except APIError as e:
-        app.logger.error(f"Gemini API hatası: {e}")
-        return jsonify({"error": "Gemini API çağrılırken bir hata oluştu. Anahtar veya kota sorun olabilir."}), 500
+        app.logger.error(f"Gemini API error: {e}")
+        return jsonify({"error": "Gemini API call failed. Check key or quota."}), 500
     except Exception as e:
-        app.logger.error(f"Beklenmedik hata: {e}")
-        return jsonify({"error": "Beklenmedik bir sunucu hatası oluştu."}), 500
+        app.logger.error(f"Unexpected error: {e}")
+        return jsonify({"error": "An unexpected server error occurred."}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=8080)

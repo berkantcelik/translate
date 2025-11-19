@@ -3,43 +3,55 @@ from flask import Flask, request, jsonify
 from google import genai
 from google.genai.errors import APIError
 
-# Initialize the Flask application
+# Flask uygulamasını başlat
 app = Flask(__name__)
 
-# --- API Client and Model Configuration ---
+# --- API İstemcisi ve Model Konfigürasyonu ---
 
-# The API Key is retrieved from the Render environment variable.
-# Key: GEMINI_API_KEY
 try:
-    # Ensure the client is only created if the API key is available
+    # API Anahtarını Ortam Değişkeninden (Render) al
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable is not set.")
+        # Eğer anahtar yoksa, uygulama başlatılırken hata vermesi daha iyidir
+        raise ValueError("GEMINI_API_KEY ortam değişkeni ayarlanmadı.")
     client = genai.Client(api_key=api_key)
 except Exception as e:
-    app.logger.error(f"Failed to create Gemini client: {e}")
+    app.logger.error(f"Gemini istemcisi oluşturulamadı veya API anahtarı eksik: {e}")
     client = None
 
 MODEL_NAME = "gemini-2.5-flash"
 
-# --- Translation Endpoint ---
+# --- API Uç Noktaları (Endpoints) ---
 
+# 1. Ana Sayfa Uç Noktası (Tarayıcıda 404 hatasını önler)
+@app.route('/', methods=['GET'])
+def home():
+    """Ana URL'ye GET isteği geldiğinde basit bir bilgi mesajı döndürür."""
+    return jsonify({
+        "status": "Online",
+        "service": "Gemini TR-EN Translation API",
+        "endpoint": "/translate",
+        "method": "POST",
+        "test_command": "curl -X POST [Render URL]/translate -H 'Content-Type: application/json' -d '{\"text\": \"Merhaba dünya\"}'"
+    })
+
+
+# 2. Çeviri Uç Noktası
 @app.route('/translate', methods=['POST'])
 def translate_text():
-    """API endpoint that translates Turkish text to natural-sounding English."""
+    """Türkçe metni doğal ve akıcı İngilizceye çevirir."""
     
     if not client:
-        return jsonify({"error": "API client is not ready. Please check the GEMINI_API_KEY environment variable."}), 500
+        return jsonify({"error": "Sunucu hatası: Gemini API istemcisi kullanıma hazır değil."}), 500
 
-    # 1. Get the input
-    data = request.get_json()
-    turkish_text = data.get('text')
+    # 1. Girdiyi al
+    data = request.get_json(silent=True) # silent=True, geçerli JSON yoksa hata vermez
+    turkish_text = data.get('text') if data else None
 
     if not turkish_text:
-        return jsonify({"error": "Please provide the text to be translated in the 'text' field."}), 400
+        return jsonify({"error": "Lütfen çevrilecek metni ('text' alanında) içeren geçerli bir JSON gövdesi sağlayın."}), 400
 
-    # 2. Humanized Prompt for Natural Output
-    # This prompt instructs the model to avoid generic AI phrasing.
+    # 2. Gemini'a gönderilecek İnsancıl İstem (Prompt)
     prompt = f"""
     You are a professional translator who thinks like a human and uses fluent, natural language. 
     Translate the Turkish text below into English in a way that an English-speaking audience would perceive as completely natural and human-written. 
@@ -49,17 +61,17 @@ def translate_text():
     """
 
     try:
-        # 3. Call the Gemini API
+        # 3. Gemini API'sini Çağır
         response = client.models.generate_content(
             model=MODEL_NAME,
             contents=prompt,
             config=genai.types.GenerateContentConfig(
-                # High Temperature (0.8) ensures higher creativity and less robotic word choice
+                # Yüksek Temperature (0.8), daha rastgele ve doğal kelime seçimi sağlar
                 temperature=0.8
             )
         )
         
-        # 4. Clean up the response and return
+        # 4. Yanıtı temizle ve döndür
         translated_text = response.text.strip()
         return jsonify({
             "original_text_tr": turkish_text,
@@ -68,13 +80,13 @@ def translate_text():
         })
 
     except APIError as e:
-        app.logger.error(f"Gemini API error: {e}")
-        return jsonify({"error": "An error occurred while calling the Gemini API."}), 500
+        # API anahtarı geçersizse veya kota dolduysa bu hatayı alırsınız.
+        app.logger.error(f"Gemini API hatası: {e}")
+        return jsonify({"error": "Gemini API çağrılırken bir hata oluştu. Anahtar veya kota sorun olabilir."}), 500
     except Exception as e:
-        app.logger.error(f"Unexpected error: {e}")
-        return jsonify({"error": "An unexpected server error occurred."}), 500
+        app.logger.error(f"Beklenmedik hata: {e}")
+        return jsonify({"error": "Beklenmedik bir sunucu hatası oluştu."}), 500
 
-# The following lines are necessary for the server to run
 if __name__ == '__main__':
-    # Run in development mode on port 8080
+    # Geliştirme ortamında çalıştırmak için
     app.run(debug=True, port=8080)

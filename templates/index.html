@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini TR-EN Çevirmen</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 40px; 
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 { 
+            text-align: center;
+            color: #1e88e5;
+            margin-bottom: 30px;
+        }
+        textarea { 
+            width: 100%; 
+            height: 120px; 
+            padding: 15px; 
+            margin-bottom: 20px; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+            font-size: 16px;
+        }
+        button { 
+            display: block;
+            width: 100%;
+            padding: 12px; 
+            background-color: #1e88e5; 
+            color: white; 
+            border: none; 
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+        #output { 
+            margin-top: 25px; 
+            padding: 15px; 
+            border: 2px dashed #a0d8ff; 
+            border-radius: 4px;
+            min-height: 50px;
+            background-color: #e3f2fd;
+            white-space: pre-wrap;
+            font-size: 16px;
+        }
+        .loading { 
+            color: #1e88e5; 
+            font-style: italic;
+        }
+        .error {
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🇹🇷 Türkçe ➡️ İngilizce Çevirmen 🇺🇸</h1>
+        <p>Gemini API ile güçlendirilmiştir.</p>
+        
+        <textarea id="turkish-input" placeholder="Türkçe metni buraya yapıştırın..."></textarea>
+        
+        <button onclick="translateText()">Çevir</button>
+        
+        <h3>Çeviri Sonucu:</h3>
+        <div id="output">Burada çevrilen İngilizce metin görünecektir...</div>
+    </div>
+
+    <script>
+        // *** ÖNEMLİ: Bu URL'yi kendi Render API adresinizle değiştirin! ***
+        // Sizin örneğiniz: https://translate-7uyc.onrender.com/translate
+        const API_URL = "https://translate-7uyc.onrender.com/translate";
+
+        async function translateText() {
+            const inputElement = document.getElementById('turkish-input');
+            const outputElement = document.getElementById('output');
+            const turkishText = inputElement.value.trim();
+
+            if (turkishText === "") {
+                outputElement.innerHTML = "<span class='error'>Lütfen çevrilecek metni giriniz.</span>";
+                return;
+            }
+
+            outputElement.innerHTML = `<span class="loading">Çevriliyor... (Bu işlem saniyeler sürebilir)</span>`;
+
+            try {
+                // API'ye POST isteği gönderme (Backend'imiz budur)
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    // JSON formatında metin gönderme
+                    body: JSON.stringify({ text: turkishText })
+                });
+
+                if (!response.ok) {
+                    // HTTP 400, 500 gibi hatalar yakalanır
+                    throw new Error(`API Hatası: Sunucu kodu ${response.status}. Lütfen Render loglarını kontrol edin.`);
+                }
+
+                const data = await response.json();
+
+                if (data.translated_text_en) {
+                    // Başarılı çeviriyi sonuç alanına yazdır
+                    outputElement.innerText = data.translated_text_en;
+                } else {
+                    // API yanıtında çeviri alanı yoksa
+                    outputElement.innerHTML = `<span class='error'>Hata: API'den beklenen çeviri metni alınamadı.</span>`;
+                }
+
+            } catch (error) {
+                // Ağ bağlantısı veya CORS gibi hatalar yakalanır
+                outputElement.innerHTML = `<span class='error'>Bağlantı Hatası: ${error.message}. API adresi doğru mu kontrol edin?</span>`;
+                console.error('Fetch Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
